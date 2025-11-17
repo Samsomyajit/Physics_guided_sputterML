@@ -1,5 +1,11 @@
 # Geometry-Aware & Calibrated ML for Resistivity
-
+```
+Authors: Nuo Cheng a, Somyajit Chakraborty b, Xiaokai Liu a, Wenyu Zhang a, Xina Liang a, Hetao Zhao a, Wenhui Bi a, Mingzhen Zhang a, Yang Liu a,d,c* , Benshuang Sun a,c,d, Jilin He a,c,d
+a School of Materials Science and Engineering, Zhengzhou University, Zhengzhou 450001, China
+b School of Chemical Engineering, Shanghai Jiao Tong University, Shanghai 200240, China
+c Zhongyuan Critical Metals Laboratory, Zhengzhou, 450001, China
+d The National Key Laboratory of Special Rare Metal Materials, Zhengzhou University, 450001, China
+```
 This repository provides a reproducible Python implementation of the machine-learning workflow described in:
 
 > Geometry-Aware and Calibrated Uncertainty Learning for Designing Indium Oxide-Based Alternative Sputtering Targets
