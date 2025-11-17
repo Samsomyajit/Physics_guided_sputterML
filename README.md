@@ -133,4 +133,4 @@ You can adapt them to other small-data materials design problems by:
 
 ## License
 
-This project is released under the MIT License (see `LICENSE`). If you prefer a different license for the GitHub repository, you can replace the file before pushing.
+This project is released under the Apache 2.0 License (see `LICENSE`). If you prefer a different license for the GitHub repository, you can replace the file before pushing.
