@@ -10,6 +10,8 @@ This repository provides a reproducible Python implementation of the machine-lea
 
 > Geometry-Aware and Calibrated Uncertainty Learning for Designing Indium Oxide-Based Alternative Sputtering Targets
 
+![](https://github.com/Samsomyajit/Physics_guided_sputterML/blob/main/data/FlowSputRes.png)
+
 The code implements a **physics-guided small-data pipeline** for predicting and optimizing the resistivity of In–Ga–Sn–Zn oxide sputtering targets from composition, process variables, and physics descriptors. It follows the same stages as the paper:
 
 1. Robust Excel ingestion and cleaning for the 86-sample dataset.
