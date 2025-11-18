@@ -57,7 +57,7 @@ The script expects the experimental dataset as an Excel file with the same struc
 
 ```python
 CANDIDATE_PATHS = [
-    "data/手动计算物理特征new.xlsx",
+    "data/Source Data Set.xlsx",
     "data/resistivity_dataset.xlsx",
 ]
 ```
