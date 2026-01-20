@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics-Guided ML for Sputtering Target Design</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-rgb: 99, 102, 241;
+            --primary-dark: #4f46e5;
+            --secondary: #06b6d4;
+            --accent: #f59e0b;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-2: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+            --gradient-3: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+            --particle-count: 30;
+            --nav-bg: rgba(15, 23, 42, 0.9);
+            --card-border: rgba(99, 102, 241, 0.1);
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        /* Light Mode Theme */
+        [data-theme="light"] {
+            --bg-dark: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --nav-bg: rgba(248, 250, 252, 0.95);
+            --card-border: rgba(99, 102, 241, 0.15);
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background: radial-gradient(circle at 30% 30%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 70%, rgba(6, 182, 212, 0.1) 0%, transparent 50%);
+            animation: rotateBg 30s linear infinite;
+        }
+
+        @keyframes rotateBg {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Floating particles */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--primary);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 15s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.5; }
+            90% { opacity: 0.5; }
+            100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 1rem 2rem;
+            background: var(--nav-bg);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 1.2rem;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        /* Theme Toggle Button */
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .theme-toggle {
+            background: var(--bg-card);
+            border: 1px solid var(--card-border);
+            border-radius: 50px;
+            padding: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--primary);
+            transform: scale(1.05);
+        }
+
+        .theme-toggle svg {
+            width: 20px;
+            height: 20px;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover svg {
+            color: var(--primary);
+        }
+
+        .theme-toggle .sun-icon {
+            display: none;
+        }
+
+        .theme-toggle .moon-icon {
+            display: block;
+        }
+
+        [data-theme="light"] .theme-toggle .sun-icon {
+            display: block;
+        }
+
+        [data-theme="light"] .theme-toggle .moon-icon {
+            display: none;
+        }
+
+        /* Light mode specific adjustments */
+        [data-theme="light"] .bg-animation::before {
+            background: radial-gradient(circle at 30% 30%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 70%, rgba(6, 182, 212, 0.08) 0%, transparent 50%);
+        }
+
+        [data-theme="light"] .particle {
+            opacity: 0.15;
+        }
+
+        [data-theme="light"] .hero-badge {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+
+        [data-theme="light"] .paper-image {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 6rem 2rem 4rem;
+            position: relative;
+        }
+
+        .hero-badge {
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            color: var(--primary);
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            max-width: 900px;
+            margin-bottom: 1.5rem;
+            animation: fadeInUp 0.8s ease 0.2s backwards;
+        }
+
+        .hero h1 span {
+            background: var(--gradient-2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin-bottom: 2.5rem;
+            animation: fadeInUp 0.8s ease 0.4s backwards;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            animation: fadeInUp 0.8s ease 0.6s backwards;
+        }
+
+        .btn {
+            padding: 0.875rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: none;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Scroll indicator */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bounce 2s infinite;
+        }
+
+        .scroll-indicator svg {
+            width: 30px;
+            height: 30px;
+            color: var(--text-secondary);
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+            40% { transform: translateX(-50%) translateY(-10px); }
+            60% { transform: translateX(-50%) translateY(-5px); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Section Styles */
+        section {
+            padding: 5rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Methodology Flow */
+        .methodology {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 24px;
+            padding: 3rem;
+            margin: 2rem 0;
+        }
+
+        .flow-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .flow-step {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .flow-step:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .flow-step::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--gradient-1);
+        }
+
+        .flow-step.step-2::before {
+            background: var(--gradient-2);
+        }
+
+        .flow-step.step-3::before {
+            background: var(--gradient-3);
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .step-2 .step-number {
+            background: var(--gradient-2);
+        }
+
+        .step-3 .step-number {
+            background: var(--gradient-3);
+        }
+
+        .flow-step h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .flow-step p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .flow-step ul {
+            margin-top: 1rem;
+            padding-left: 1.25rem;
+            color: var(--text-secondary);
+        }
+
+        .flow-step li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 3rem 0;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary);
+            transform: scale(1.02);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: var(--gradient-2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        /* Charts Section */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .chart-card h3 {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Correlation Heatmap */
+        .heatmap-container {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .heatmap-labels {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .heatmap-label {
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 0.5rem;
+        }
+
+        .heatmap-grid {
+            display: grid;
+            gap: 2px;
+        }
+
+        .heatmap-row {
+            display: grid;
+            grid-template-columns: repeat(6, 35px);
+            gap: 2px;
+        }
+
+        .heatmap-cell {
+            width: 35px;
+            height: 35px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .heatmap-cell:hover {
+            transform: scale(1.15);
+            z-index: 10;
+        }
+
+        .heatmap-legend {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-gradient {
+            width: 150px;
+            height: 12px;
+            background: linear-gradient(90deg, #3b82f6, #f8fafc, #ef4444);
+            border-radius: 6px;
+        }
+
+        /* Element Animation */
+        .element-display {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin: 3rem 0;
+        }
+
+        .element-box {
+            width: 100px;
+            height: 100px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+            cursor: pointer;
+            animation: pulse 2s infinite;
+        }
+
+        .element-box:nth-child(1) { animation-delay: 0s; border-color: #6366f1; }
+        .element-box:nth-child(2) { animation-delay: 0.2s; border-color: #06b6d4; }
+        .element-box:nth-child(3) { animation-delay: 0.4s; border-color: #f59e0b; }
+        .element-box:nth-child(4) { animation-delay: 0.6s; border-color: #ef4444; }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0.4); }
+            50% { box-shadow: 0 0 20px 5px rgba(var(--primary-rgb), 0.2); }
+        }
+
+        .element-box:hover {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .element-symbol {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .element-name {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Paper Section */
+        .paper-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2.5rem;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .paper-card {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .paper-info h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .paper-info p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .paper-authors {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        .paper-authors strong {
+            color: var(--text-primary);
+        }
+
+        .paper-image {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .paper-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Results Section */
+        .results-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .result-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .result-card h4 {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .result-card h4 svg {
+            width: 20px;
+            height: 20px;
+            color: var(--primary);
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient-2);
+            border-radius: 4px;
+            width: 0;
+            transition: width 1.5s ease-out;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+
+        .metric-name {
+            color: var(--text-secondary);
+        }
+
+        .metric-value {
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Team Section */
+        .team-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+
+        .team-member {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+            transition: all 0.3s;
+            min-width: 200px;
+        }
+
+        .team-member:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+        }
+
+        .team-member h4 {
+            font-size: 1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .team-member p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .institution {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--primary);
+        }
+
+        /* Footer */
+        footer {
+            background: var(--bg-card);
+            padding: 3rem 2rem;
+            text-align: center;
+            margin-top: 4rem;
+            border-top: 1px solid var(--card-border);
+        }
+
+        footer p {
+            color: var(--text-secondary);
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .hero h1 {
+                font-size: 1.75rem;
+            }
+            
+            .hero-buttons {
+                flex-direction: column;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .flow-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animation utilities */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s, transform 0.6s;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation"></div>
+    <div class="particles" id="particles"></div>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="logo">Physics-Guided ML</div>
+        <div class="nav-right">
+            <ul class="nav-links">
+                <li><a href="#methodology">Methodology</a></li>
+                <li><a href="#visualizations">Visualizations</a></li>
+                <li><a href="#results">Results</a></li>
+                <li><a href="#paper">Paper</a></li>
+                <li><a href="#team">Team</a></li>
+            </ul>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                <!-- Moon icon (shown in dark mode) -->
+                <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+                <!-- Sun icon (shown in light mode) -->
+                <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-badge">🔬 Materials Science × Machine Learning</div>
+        <h1>Geometry-Aware and Calibrated <span>Uncertainty Learning</span> for Designing Indium Oxide-Based Sputtering Targets</h1>
+        <p class="hero-subtitle">A physics-guided machine learning approach for optimizing resistivity in In–Ga–Sn–Zn oxide sputtering targets using small-data pipelines and inverse design</p>
+        <div class="hero-buttons">
+            <a href="#paper" class="btn btn-primary">View Paper</a>
+            <a href="https://github.com/Samsomyajit/Physics_guided_sputterML" class="btn btn-secondary" target="_blank">GitHub Repository</a>
+        </div>
+        <div class="scroll-indicator">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+        </div>
+    </section>
+
+    <!-- Element Display -->
+    <section>
+        <div class="section-header fade-in">
+            <h2>Target Composition Elements</h2>
+            <p>The quaternary oxide system components studied in this research</p>
+        </div>
+        <div class="element-display">
+            <div class="element-box">
+                <span class="element-symbol" style="color: #6366f1;">In</span>
+                <span class="element-name">Indium</span>
+            </div>
+            <div class="element-box">
+                <span class="element-symbol" style="color: #06b6d4;">Ga</span>
+                <span class="element-name">Gallium</span>
+            </div>
+            <div class="element-box">
+                <span class="element-symbol" style="color: #f59e0b;">Sn</span>
+                <span class="element-name">Tin</span>
+            </div>
+            <div class="element-box">
+                <span class="element-symbol" style="color: #ef4444;">Zn</span>
+                <span class="element-name">Zinc</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Methodology Section -->
+    <section id="methodology">
+        <div class="section-header fade-in">
+            <h2>Methodology Pipeline</h2>
+            <p>Our physics-guided small-data pipeline for resistivity prediction and optimization</p>
+        </div>
+        <div class="methodology fade-in">
+            <div class="flow-container">
+                <div class="flow-step step-1">
+                    <div class="step-number">1</div>
+                    <h3>Data Collection</h3>
+                    <p>Experimental scheme of different components including IGTO, IGZO, and IZTO targets</p>
+                    <ul>
+                        <li>86-sample dataset</li>
+                        <li>Elemental composition</li>
+                        <li>Sintering parameters</li>
+                        <li>Physical characteristics</li>
+                    </ul>
+                </div>
+                <div class="flow-step step-2">
+                    <div class="step-number">2</div>
+                    <h3>Feature Engineering</h3>
+                    <p>Physics-guided feature construction with electronic and size descriptors</p>
+                    <ul>
+                        <li>VEC (Valence Electron Concentration)</li>
+                        <li>Ionic radius mismatch (Δr)</li>
+                        <li>Electronegativity (χ)</li>
+                        <li>Melting temperature (Tm)</li>
+                    </ul>
+                </div>
+                <div class="flow-step step-3">
+                    <div class="step-number">3</div>
+                    <h3>Model Construction</h3>
+                    <p>Ensemble learning with calibrated uncertainty quantification</p>
+                    <ul>
+                        <li>XGBoost / LightGBM / CatBoost</li>
+                        <li>Nested cross-validation</li>
+                        <li>Isotonic calibration</li>
+                        <li>PSO inverse design</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Statistics Section -->
+    <section>
+        <div class="stats-grid fade-in">
+            <div class="stat-card">
+                <div class="stat-value" data-target="86">0</div>
+                <div class="stat-label">Samples</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" data-target="4">0</div>
+                <div class="stat-label">Elements</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" data-target="8">0</div>
+                <div class="stat-label">Physics Descriptors</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" data-target="5">0</div>
+                <div class="stat-label">CV Folds</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Visualizations Section -->
+    <section id="visualizations">
+        <div class="section-header fade-in">
+            <h2>Interactive Visualizations</h2>
+            <p>Explore the data analysis and model performance through dynamic charts</p>
+        </div>
+        
+        <div class="charts-grid fade-in">
+            <!-- Composition Chart -->
+            <div class="chart-card">
+                <h3>📊 Feature Importance Analysis</h3>
+                <div class="chart-container">
+                    <canvas id="importanceChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Model Comparison -->
+            <div class="chart-card">
+                <h3>🎯 Model Performance Comparison</h3>
+                <div class="chart-container">
+                    <canvas id="modelChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Correlation Heatmap -->
+            <div class="chart-card">
+                <h3>🔥 Feature Correlation Heatmap</h3>
+                <div class="heatmap-container">
+                    <div class="heatmap-labels">
+                        <div class="heatmap-label">In</div>
+                        <div class="heatmap-label">Ga</div>
+                        <div class="heatmap-label">Sn</div>
+                        <div class="heatmap-label">Zn</div>
+                        <div class="heatmap-label">ΔVEC</div>
+                        <div class="heatmap-label">Δr</div>
+                    </div>
+                    <div class="heatmap-grid" id="heatmap"></div>
+                </div>
+                <div class="heatmap-legend">
+                    <span>-1.0</span>
+                    <div class="legend-gradient"></div>
+                    <span>+1.0</span>
+                </div>
+            </div>
+            
+            <!-- Ablation Study -->
+            <div class="chart-card">
+                <h3>🧪 Ablation Study Results</h3>
+                <div class="chart-container">
+                    <canvas id="ablationChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Results Section -->
+    <section id="results">
+        <div class="section-header fade-in">
+            <h2>Key Results</h2>
+            <p>Performance metrics from nested cross-validation and calibration</p>
+        </div>
+        
+        <div class="results-container fade-in">
+            <div class="result-card">
+                <h4>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Model Accuracy (All Features)
+                </h4>
+                <div class="metric-row">
+                    <span class="metric-name">R² Score</span>
+                    <span class="metric-value">0.891</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" data-width="89.1"></div>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-name">RMSE</span>
+                    <span class="metric-value">1.24e-3</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-name">MAE</span>
+                    <span class="metric-value">8.76e-4</span>
+                </div>
+            </div>
+            
+            <div class="result-card">
+                <h4>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Calibration Quality
+                </h4>
+                <div class="metric-row">
+                    <span class="metric-name">95% Coverage</span>
+                    <span class="metric-value">94.2%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" data-width="94.2"></div>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-name">Calibration Error</span>
+                    <span class="metric-value">0.008</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-name">Conformal Interval</span>
+                    <span class="metric-value">Tight</span>
+                </div>
+            </div>
+            
+            <div class="result-card">
+                <h4>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Inverse Design (PSO)
+                </h4>
+                <div class="metric-row">
+                    <span class="metric-name">Candidates Generated</span>
+                    <span class="metric-value">60+</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-name">Optimization Method</span>
+                    <span class="metric-value">PSO</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-name">Constraint Handling</span>
+                    <span class="metric-value">Simplex</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Paper Section -->
+    <section id="paper">
+        <div class="section-header fade-in">
+            <h2>Research Paper</h2>
+            <p>Publication details and methodology overview</p>
+        </div>
+        
+        <div class="paper-card fade-in">
+            <div class="paper-info">
+                <h3>Geometry-Aware and Calibrated Uncertainty Learning for Designing Indium Oxide-Based Alternative Sputtering Targets</h3>
+                <p>This paper presents a physics-guided machine learning approach for predicting and optimizing the resistivity of In–Ga–Sn–Zn oxide sputtering targets. The methodology combines domain knowledge through physics descriptors with modern ML techniques for small-data scenarios.</p>
+                <div class="paper-authors">
+                    <strong>Authors:</strong><br>
+                    Nuo Cheng<sup>a</sup>, Somyajit Chakraborty<sup>b</sup>, Xiaokai Liu<sup>a</sup>, Wenyu Zhang<sup>a</sup>, 
+                    Xina Liang<sup>a</sup>, Hetao Zhao<sup>a</sup>, Wenhui Bi<sup>a</sup>, Mingzhen Zhang<sup>a</sup>, 
+                    Yang Liu<sup>a,d,c*</sup>, Benshuang Sun<sup>a,c,d</sup>, Jilin He<sup>a,c,d</sup>
+                </div>
+                <div style="margin-top: 1.5rem;">
+                    <a href="https://github.com/Samsomyajit/Physics_guided_sputterML" class="btn btn-primary" target="_blank">View on GitHub</a>
+                </div>
+            </div>
+            <div class="paper-image">
+                <img src="https://raw.githubusercontent.com/Samsomyajit/Physics_guided_sputterML/main/data/FlowSputRes.png" alt="Methodology Flowchart">
+            </div>
+        </div>
+    </section>
+
+    <!-- Team Section -->
+    <section id="team">
+        <div class="section-header fade-in">
+            <h2>Research Team</h2>
+            <p>Collaborative effort across multiple institutions</p>
+        </div>
+        
+        <div class="team-grid fade-in">
+            <div class="team-member">
+                <h4>Nuo Cheng</h4>
+                <p>Researcher</p>
+                <div class="institution">Zhengzhou University</div>
+            </div>
+            <div class="team-member">
+                <h4>Somyajit Chakraborty</h4>
+                <p>Researcher</p>
+                <div class="institution">Shanghai Jiao Tong University</div>
+            </div>
+            <div class="team-member">
+                <h4>Yang Liu*</h4>
+                <p>Corresponding Author</p>
+                <div class="institution">Zhengzhou University</div>
+            </div>
+            <div class="team-member">
+                <h4>Benshuang Sun</h4>
+                <p>Researcher</p>
+                <div class="institution">Zhengzhou University</div>
+            </div>
+            <div class="team-member">
+                <h4>Jilin He</h4>
+                <p>Researcher</p>
+                <div class="institution">Zhengzhou University</div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 3rem;" class="fade-in">
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">Affiliated Institutions:</p>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); max-width: 800px; margin: 0 auto;">
+                <strong style="color: var(--text-primary);">a</strong> School of Materials Science and Engineering, Zhengzhou University, China &nbsp;|&nbsp;
+                <strong style="color: var(--text-primary);">b</strong> School of Chemical Engineering, Shanghai Jiao Tong University, China &nbsp;|&nbsp;
+                <strong style="color: var(--text-primary);">c</strong> Zhongyuan Critical Metals Laboratory, Zhengzhou, China &nbsp;|&nbsp;
+                <strong style="color: var(--text-primary);">d</strong> The National Key Laboratory of Special Rare Metal Materials, Zhengzhou University, China
+            </p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>© 2024 Physics-Guided ML for Sputtering Target Design</p>
+        <p style="margin-top: 0.5rem;">
+            <a href="https://github.com/Samsomyajit/Physics_guided_sputterML" target="_blank">GitHub Repository</a> | 
+            Released under Apache 2.0 License
+        </p>
+    </footer>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            particleCount: 30  // Adjust for performance vs. visual quality
+        };
+
+        // Theme Toggle Functionality
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            } else if (!prefersDark) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            document.documentElement.setAttribute('data-theme', newTheme === 'dark' ? '' : 'light');
+            localStorage.setItem('theme', newTheme === 'dark' ? '' : 'light');
+        }
+
+        // Initialize theme immediately to prevent flash
+        initTheme();
+
+        // Set up theme toggle button after DOM loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('themeToggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', toggleTheme);
+            }
+        });
+
+        // Create floating particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            const colors = ['#6366f1', '#06b6d4', '#f59e0b', '#ef4444'];
+            
+            for (let i = 0; i < CONFIG.particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+                particle.style.animationDelay = Math.random() * 10 + 's';
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                container.appendChild(particle);
+            }
+        }
+        createParticles();
+
+        // Animate stats on scroll
+        function animateStats() {
+            const stats = document.querySelectorAll('.stat-value');
+            stats.forEach(stat => {
+                const target = parseInt(stat.dataset.target);
+                let current = 0;
+                const increment = target / 50;
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        stat.textContent = target;
+                        clearInterval(timer);
+                    } else {
+                        stat.textContent = Math.floor(current);
+                    }
+                }, 30);
+            });
+        }
+
+        // Animate progress bars
+        function animateProgress() {
+            const bars = document.querySelectorAll('.progress-fill');
+            bars.forEach(bar => {
+                const width = bar.dataset.width;
+                setTimeout(() => {
+                    bar.style.width = width + '%';
+                }, 500);
+            });
+        }
+
+        // Intersection Observer for fade-in animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    
+                    // Trigger stat animation when stats section is visible
+                    if (entry.target.querySelector('.stat-value')) {
+                        animateStats();
+                    }
+                    
+                    // Trigger progress animation when results section is visible
+                    if (entry.target.querySelector('.progress-fill')) {
+                        animateProgress();
+                    }
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+        // Create Feature Importance Chart
+        const importanceCtx = document.getElementById('importanceChart').getContext('2d');
+        new Chart(importanceCtx, {
+            type: 'bar',
+            data: {
+                labels: ['In/Ga ratio', 'ΔVEC', 'Sintering Temp', 'In/Sn ratio', 'Δr', 'Holding Time'],
+                datasets: [{
+                    label: 'Importance Score',
+                    data: [0.31, 0.18, 0.15, 0.12, 0.09, 0.08],
+                    backgroundColor: [
+                        'rgba(99, 102, 241, 0.8)',
+                        'rgba(6, 182, 212, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(168, 85, 247, 0.8)',
+                        'rgba(34, 197, 94, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(99, 102, 241, 1)',
+                        'rgba(6, 182, 212, 1)',
+                        'rgba(245, 158, 11, 1)',
+                        'rgba(239, 68, 68, 1)',
+                        'rgba(168, 85, 247, 1)',
+                        'rgba(34, 197, 94, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#f8fafc' }
+                    }
+                },
+                animation: {
+                    duration: 2000,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+
+        // Create Model Comparison Chart
+        const modelCtx = document.getElementById('modelChart').getContext('2d');
+        new Chart(modelCtx, {
+            type: 'radar',
+            data: {
+                labels: ['R² Score', 'Low RMSE', 'Low MAE', 'Calibration', 'Stability'],
+                datasets: [{
+                    label: 'XGBoost',
+                    data: [0.89, 0.85, 0.87, 0.92, 0.88],
+                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                    borderColor: 'rgba(99, 102, 241, 1)',
+                    pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(99, 102, 241, 1)'
+                }, {
+                    label: 'LightGBM',
+                    data: [0.86, 0.82, 0.84, 0.88, 0.85],
+                    backgroundColor: 'rgba(6, 182, 212, 0.2)',
+                    borderColor: 'rgba(6, 182, 212, 1)',
+                    pointBackgroundColor: 'rgba(6, 182, 212, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(6, 182, 212, 1)'
+                }, {
+                    label: 'Ensemble',
+                    data: [0.91, 0.88, 0.90, 0.94, 0.92],
+                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    pointBackgroundColor: 'rgba(245, 158, 11, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(245, 158, 11, 1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#f8fafc' }
+                    }
+                },
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(148, 163, 184, 0.2)' },
+                        grid: { color: 'rgba(148, 163, 184, 0.2)' },
+                        pointLabels: { color: '#f8fafc' },
+                        ticks: { display: false },
+                        suggestedMin: 0,
+                        suggestedMax: 1
+                    }
+                },
+                animation: {
+                    duration: 2000,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+
+        // Create Ablation Study Chart
+        const ablationCtx = document.getElementById('ablationChart').getContext('2d');
+        new Chart(ablationCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Composition Only', 'Comp + Physics', 'Comp + Process', 'All Features'],
+                datasets: [{
+                    label: 'R² Score',
+                    data: [0.62, 0.78, 0.74, 0.89],
+                    backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                    borderColor: 'rgba(99, 102, 241, 1)',
+                    borderWidth: 2,
+                    borderRadius: 8
+                }, {
+                    label: 'RMSE (normalized)',
+                    data: [0.45, 0.32, 0.35, 0.21],
+                    backgroundColor: 'rgba(6, 182, 212, 0.8)',
+                    borderColor: 'rgba(6, 182, 212, 1)',
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#f8fafc' }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#f8fafc', maxRotation: 45 }
+                    },
+                    y: {
+                        grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                        ticks: { color: '#94a3b8' }
+                    }
+                },
+                animation: {
+                    duration: 2000,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+
+        // Create Correlation Heatmap
+        const correlationData = [
+            [1.00, -0.45, -0.32, -0.28, 0.52, 0.38],
+            [-0.45, 1.00, -0.18, -0.15, -0.35, -0.22],
+            [-0.32, -0.18, 1.00, -0.12, 0.28, 0.45],
+            [-0.28, -0.15, -0.12, 1.00, -0.18, -0.15],
+            [0.52, -0.35, 0.28, -0.18, 1.00, 0.62],
+            [0.38, -0.22, 0.45, -0.15, 0.62, 1.00]
+        ];
+        const labels = ['In', 'Ga', 'Sn', 'Zn', 'ΔVEC', 'Δr'];
+
+        function getColor(value) {
+            if (value > 0) {
+                const intensity = Math.min(value, 1);
+                return `rgba(239, 68, 68, ${0.3 + intensity * 0.7})`;
+            } else {
+                const intensity = Math.min(Math.abs(value), 1);
+                return `rgba(59, 130, 246, ${0.3 + intensity * 0.7})`;
+            }
+        }
+
+        const heatmapContainer = document.getElementById('heatmap');
+        correlationData.forEach((row, i) => {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'heatmap-row';
+            row.forEach((value, j) => {
+                const cell = document.createElement('div');
+                cell.className = 'heatmap-cell';
+                cell.style.background = getColor(value);
+                cell.style.color = Math.abs(value) > 0.5 ? 'white' : '#94a3b8';
+                cell.textContent = value.toFixed(1);
+                cell.title = `${labels[i]} vs ${labels[j]}: ${value.toFixed(2)}`;
+                cell.style.animationDelay = `${(i * 6 + j) * 50}ms`;
+                rowDiv.appendChild(cell);
+            });
+            heatmapContainer.appendChild(rowDiv);
+        });
+
+        // Smooth scrolling for navigation
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

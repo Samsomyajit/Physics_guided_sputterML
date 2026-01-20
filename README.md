@@ -1,4 +1,8 @@
 # Geometry-Aware & Calibrated ML for Resistivity
+
+[![Project Website](https://img.shields.io/badge/🌐_Project-Website-blue)](https://samsomyajit.github.io/Physics_guided_sputterML/)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-black)](https://github.com/Samsomyajit/Physics_guided_sputterML)
+
 ```
 Authors: Nuo Cheng a, Somyajit Chakraborty b, Xiaokai Liu a, Wenyu Zhang a, Xina Liang a, Hetao Zhao a, Wenhui Bi a, Mingzhen Zhang a, Yang Liu a,d,c* , Benshuang Sun a,c,d, Jilin He a,c,d
 a School of Materials Science and Engineering, Zhengzhou University, Zhengzhou 450001, China
@@ -6,6 +10,26 @@ b School of Chemical Engineering, Shanghai Jiao Tong University, Shanghai 200240
 c Zhongyuan Critical Metals Laboratory, Zhengzhou, 450001, China
 d The National Key Laboratory of Special Rare Metal Materials, Zhengzhou University, 450001, China
 ```
+
+## 🌐 Interactive Project Website
+
+**[View the Interactive Project Website →](https://samsomyajit.github.io/Physics_guided_sputterML/)**
+
+The project includes an interactive webpage featuring:
+- 📊 Animated data visualizations (feature importance, model comparison, correlation heatmaps)
+- 🔬 Methodology pipeline visualization
+- 📈 Key results and performance metrics
+- 📄 Paper information and author details
+
+To deploy locally:
+```bash
+cd docs
+python -m http.server 8080
+# Open http://localhost:8080 in your browser
+```
+
+---
+
 This repository provides a reproducible Python implementation of the machine-learning workflow described in:
 
 > Geometry-Aware and Calibrated Uncertainty Learning for Designing Indium Oxide-Based Alternative Sputtering Targets
@@ -29,6 +53,8 @@ physics-guided-ml-resistivity/
 ├── README.md                  # This file
 ├── LICENSE                    # MIT license (feel free to change)
 ├── requirements.txt           # Python dependencies
+├── docs/
+│   └── index.html             # Interactive project webpage
 ├── src/
 │   └── physics_guided_ml_for_resistivity.py  # Main end-to-end pipeline
 ├── scripts/
